@@ -24,16 +24,16 @@ class WP_REST_WPML_ACF_Meta_Controller extends WP_REST_Posts_Controller{
         foreach($this->namespaces as $namespace) {
             $this->namespace = $namespace;
             /* without fields keys */
-            register_rest_route($this->namespace,'/'.$this->rest_base . '/(?P<postid>[\d\w]+)/',array(
+            register_rest_route($this->namespace,'/'.$this->rest_base . '/(?P<id>[\d\w]+)/',array(
                 array (
                     'methods'         => WP_REST_Server::READABLE,
-                    'callback'        => array( $this, 'wpml_get_fields' ),
+                    'callback'        => array( $this, 'wpml_get_acf_fields' ),
                     'permission_callback' => array( $this, 'get_items_permissions_check' ),
                     'args'            => $this->get_collection_params()
                 ),
             ));
             /* with fields keys */
-            register_rest_route($this->namespace,'/'.$this->rest_base . '/(?P<postid>[\d\w]+)/(?P<key>[\w]+)',array(
+            register_rest_route($this->namespace,'/'.$this->rest_base . '/(?P<id>[\d\w]+)/(?P<key>[\w]+)',array(
                 array (
                     'methods'         => WP_REST_Server::READABLE,
                     'callback'        => array( $this, 'wpml_get_field' ),
@@ -49,11 +49,18 @@ class WP_REST_WPML_ACF_Meta_Controller extends WP_REST_Posts_Controller{
      * recall WP_REST_Posts_Controller->get_items
      * just change wpml language before call that
      */
-    public function wpml_get_fields($request){//echo $request['postid'];
-        $options = get_fields($request['postid']);
-        if($options)
-            return $options;
-        return null;
+    public function wpml_get_acf_fields($request){
+        if(class_exists('acf_pro')) {
+            $fields = get_field_objects($request['id']);
+            if($fields) {
+                foreach($fields as $field_key => $field) {
+                    $data[$field_key] = $field['value'];
+                }
+            }
+        } else {
+            $data['error'] = 'ACF Pro Needed';
+        }
+        return $data;
     }
 
     /**
@@ -62,7 +69,7 @@ class WP_REST_WPML_ACF_Meta_Controller extends WP_REST_Posts_Controller{
      * just check target post id is in that target language.
      */
     public function wpml_get_field($request) {
-        $option = get_field($request['key'],$request['postid']);
+        $option = get_field($request['key'],$request['id']);
         if($option) {
             $optObj = new stdClass();
             $optObj->key = $request['key'];

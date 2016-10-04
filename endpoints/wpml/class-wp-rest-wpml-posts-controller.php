@@ -2,9 +2,11 @@
 class WP_REST_WPML_Posts_Controller extends WP_REST_Posts_Controller {
     protected $namespaces;
     protected $post_type;
+
     function __construct($post_type)
     {
         global $wp_rest_helper;
+        $this->acf_meta_controller = new WP_REST_WPML_ACF_Meta_Controller();
         $this->namespaces = $wp_rest_helper->get_all_restml_namespaces();
         $this->post_type = $post_type;
         $obj = get_post_type_object($post_type);
@@ -96,7 +98,11 @@ class WP_REST_WPML_Posts_Controller extends WP_REST_Posts_Controller {
         if($id !== $the_id) {
             return new WP_Error( 'rest_post_invalid_id_in_language', __( 'Invalid post id in current language.' ), array( 'status' => 404 ) );
         } else {
-            return $this->get_item($request);
+            $original_response = $this->get_item($request);
+            $original_response = $this->prepare_data_with_metas($original_response,$request);
+            $original_response = $this->prepare_data_with_attachement($request,$original_response);
+            $response = $wp_rest_helper->hidden_backend_information($original_response);
+            return $response;
         }
     }
 
@@ -119,16 +125,39 @@ class WP_REST_WPML_Posts_Controller extends WP_REST_Posts_Controller {
             $query->the_post();
             $post = get_post();
             $data = $this->prepare_item_for_response( $post, $request );
-            $response = rest_ensure_response( $data );
+            $original_response = rest_ensure_response( $data );
             if ( is_post_type_viewable( get_post_type_object( $post->post_type ) ) ) {
-                $response->link_header( 'alternate',  get_permalink( $post->ID ), array( 'type' => 'text/html' ) );
+                $original_response->link_header( 'alternate',  get_permalink( $post->ID ), array( 'type' => 'text/html' ) );
             }
             wp_reset_postdata();
-            return $response;
+            $original_response = $this->prepare_data_with_metas($original_response,$request);
+            $original_response = $this->prepare_data_with_attachement($request,$original_response);
+            $original_response = $wp_rest_helper->hidden_backend_information($original_response);
+            return $original_response;
         } else {
             wp_reset_postdata();
             return new WP_Error( 'no_'.$this->post_type.'_found', __( 'No exist Contents.'), array( 'status' => 404 ) );
         }
+    }
+
+    public function prepare_data_with_metas($original_response,$request){
+        $query_param_array = $request->get_query_params();
+        if($query_param_array[REST_EXTENTED_FILTER][REST_EXTENTED_FILTER_ACF]) {
+            $options = $this->acf_meta_controller->wpml_get_acf_fields($request);
+            $original_response->data[REST_EXTENTED_FILTER_ACF] = $options;
+        }
+        return $original_response;
+    }
+
+    public function prepare_data_with_attachement($request,$original_response){
+        global $wp_rest_helper;
+        $query_param_array = $request->get_query_params();
+        if($query_param_array[REST_EXTENTED_FILTER][REST_EXTENTED_FILTER_ATTACHMENT] && has_post_thumbnail($request['id'])) {
+            $original_response->data['featured_media_origin_url'] = $wp_rest_helper->feature_image_helper($request['id']);
+        } else {
+            $original_response->data['featured_media_origin_url'] = null;
+        }
+        return $original_response;
     }
 }
 ?>

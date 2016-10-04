@@ -3,9 +3,9 @@
  * Plugin Name: WP REST API EXTENSION
  * Description: Based on WP REST API, extend more functionality for popular plugins
  * Author: Thomas Xiaojie Wang
- * Author URI: https://github.com/laughingw
+ * Author URI: https://github.com/LaughingKids
  * Version: 1.0
- * Plugin URI: https://github.com/laughingw/wp-api-extension
+ * Plugin URI: https://github.com/LaughingKids/wp-rest-api-extension
  * License: MIT
  */
 require_once dirname(__FILE__) . '/utilities/simple_html_dom.php';
@@ -19,6 +19,13 @@ define('RESTML_POST_TYPE_CONTROLLER','WP_REST_WPML_Post_Types_Controller');
 define('MENU_CONTROLLER_CLASS','WP_REST_WPML_MENU_Controller');
 define('WPCF7_CONTROLLER_CLASS','WP_REST_WPML_WPCF7_Controller');
 define('ACF_CONTROLLER','WP_REST_WPML_ACF_Meta_Controller');
+/* rest extented function query labels */
+define('REST_EXTENTED_FILTER','rest-extended');
+define('REST_EXTENTED_FILTER_ACF','acf_metas');
+define('REST_EXTENTED_FILTER_ATTACHMENT','post_attachment');
+
+/* front end file resquest */
+define('FRONT_END_STATIC_FILE_REQ_PREFIX','/files/');
 
 register_activation_hook( __FILE__, 'rest_api_active' );
 function rest_api_active(){

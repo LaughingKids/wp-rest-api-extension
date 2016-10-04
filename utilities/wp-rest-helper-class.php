@@ -67,6 +67,10 @@ class WP_REST_Helper {
         $controller = new $controller_class();
         $controller->register_routes();
 
+        /* wordpress ACF PRO */
+        $controller_class = 'WP_REST_WPML_ACF_Meta_Controller';
+        $controller = new $controller_class();
+        $controller->register_routes();
 //        flush_rewrite_rules();
     }
 
@@ -98,5 +102,36 @@ class WP_REST_Helper {
         } else {
             return new WP_Error( 'bad_request', __( 'Request without language in namespace' ), array( 'status' => 404 ) );
         }
+    }
+
+    public function get_post_acf_metas ($postId) {
+        if(class_exists('acf_pro')) {
+            $fields = get_field_objects($postId);
+            if($fields) {
+                foreach($fields as $field_key => $field) {
+                    $data[$field_key] = get_field($field_key);
+                }
+            }
+        } else {
+            wp_die('Sorry, but this plugin requires the ACF_pro to be installed and active. <br><a href="' . admin_url( 'plugins.php' ) . '">&laquo; Return to Plugins</a>');
+        }
+        return $data;
+    }
+
+    public function feature_image_helper($postId){
+        $url = wp_get_attachment_url((int) get_post_thumbnail_id($postId));
+        $url_items = explode('/',$url);
+        /* http://backend.example.com/wp-content/uploads/2016/09/Horizon.jpg*/
+        $return_url_items = array_slice($url_items,-3,3,true);
+        /* $return_url_items = {2016,09,Horizon.jpg} */
+        return FRONT_END_STATIC_FILE_REQ_PREFIX.join($return_url_items,'/');
+    }
+
+    public function hidden_backend_information($original_response) {
+        unset($original_response->data['guid']);
+        foreach($original_response->get_links() as $key=>$value) {
+            $original_response->remove_link($key);
+        }
+        return $original_response;
     }
 }
